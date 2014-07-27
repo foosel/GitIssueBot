@@ -85,7 +85,7 @@ def params():
 
 	entry_points = {
 		"console_scripts": [
-			"gitissuebot-approve = gitissuebot:approve"
+			"gitissuebot-approve = gitissuebot.approve:main"
 		]
 	}
 
