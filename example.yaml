@@ -1,0 +1,67 @@
+# The Github access token to use for accessing the Github API
+token: someVeryLongToken
+
+# The repository on which to work, in the format <username>/<repositoryname>
+repo: myuser/myrepository
+
+# Any issues added since that date will be processed
+since: 2014-07-27 12:00:00+00:00
+
+# Phrase to search for
+phrase: I love cookies
+
+# Label to add to issue if it's invalid
+label: incomplete issue
+
+# Grace period after which to close issues that are still invalid
+grace_period: 14
+
+# Labels if issues to ignore
+ignored_labels:
+- request
+- support
+- question
+- misc
+- accepted
+
+# Parts of titles of issues to ignore
+ignored_titles:
+- '[Request]'
+- '[Support]'
+- '[Question]'
+- '[Misc]'
+
+# Reminder to add to incomplete issues
+reminder: 'Hi @{author},
+
+
+  It looks like there is some information missing from your ticket that will be needed
+  in order to diagnose and fix the problem at hand. Please take a look at the [Contribution
+  Guidelines](https://github.com/myuser/myrepository/blob/master/CONTRIBUTING.md), which 
+  will tell you **exactly** what your ticket has to contain in order to be processable.
+
+
+  I''m marking this one now as needing some more information. Please understand that
+  if you do not provide that information within the next two weeks (until {until})
+  I''ll close this ticket so it doesn''t clutter the bug tracker.
+
+
+  Best regards,
+
+  ~ Your friendly GitIssueBot
+
+
+  PS: I''m just an automated script, not a human being.
+
+  '
+
+# Comment to add when closing an issue
+closing: 'Since apparently some of the required information is still missing, I''m
+  closing this now, sorry. Feel free to reopen this or create a new issue once you
+  can provide **all** required information.
+
+  '
+
+# Whether to only perform a dry run, without any writing requests against the API
+dryrun: false
+
