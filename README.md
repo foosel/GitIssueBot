@@ -103,3 +103,7 @@ access to repo and -- if the issue of a private repository are to be managed -- 
 
 You will need to regularly execute the approve script, I recommend creating a cronjob for that and then let it do
 its job daily or weekly or something like that.
+
+## Contributors
+
+- [Philippe Neumann](https://github.com/demod) (brain storming, sanity check of the concept)
