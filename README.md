@@ -98,3 +98,8 @@ An example for such a configuration file can be found below:
 
 The [generated token](https://help.github.com/articles/creating-an-access-token-for-command-line-use) needs to grant 
 access to repo and -- if the issue of a private repository are to be managed -- also access to private repos.
+
+### Usage
+
+You will need to regularly execute the approve script, I recommend creating a cronjob for that and then let it do
+its job daily or weekly or something like that.
