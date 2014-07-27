@@ -379,9 +379,17 @@ def main():
 						help="Text of comment when closing an issue after the grace period, defaults to not set and thus no comment being posted upon closing.")
 	parser.add_argument("--dry-run", action="store_true", dest="dryrun",
 						help="Just print what would be done without actually doing it")
+	parser.add_argument("-v", "--version", action="store_true", dest="version",
+						help="Print the version and exit")
 
 	# parse CLI arguments
 	args = parser.parse_args()
+
+	# if only version is to be printed, do so and exit
+	if args.version:
+		from gitissuebot import _version
+		print(_version.get_versions()["version"])
+		sys.exit(0)
 
 	# merge config (if given) and CLI parameters
 	config = load_config(args.config)
