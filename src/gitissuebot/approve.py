@@ -210,7 +210,7 @@ def check_issues(config, file=None, dryrun=False):
 	for issue in issues:
 		internal = convert_to_internal(issue)
 
-		print("Processing \"%s\" by %s (created %s, last updated %s)" % (internal["title"], internal["author"], internal["created_str"], internal["updated_str"]))
+		print(u"Processing \"%s\" by %s (created %s, last updated %s)" % (internal["title"], internal["author"], internal["created_str"], internal["updated_str"]))
 
 		valid = validator(issue, headers, config)
 
