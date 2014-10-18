@@ -20,27 +20,15 @@ ISSUES_URL = "https://api.github.com/repos/{repo}/issues?state=open&since={since
 ##~~ some helpers
 
 
-def issue_filter(issue, ignored_labels=(), ignored_titles=()):
+def issue_filter(issue):
 	"""
-	Filters the given issue, returns True iff issue is neither a pull request nor has an ignored label or contains
-	an ignored title
+	Filters the given issue, returns True iff issue is not a pull request
 
 	:param issue: the issue to filter
-	:param ignored_labels: list of ignored labels to check against
-	:param ignored_titles: list of ignored titles to check against
 	:return: true if issue matches the filter (see above), false otherwise
 	"""
 
-	not_pull_request = not "pull_request" in issue
-	not_ignored_label = len(set(ignored_labels).intersection(set(map(lambda x: x["name"], issue["labels"])))) == 0
-
-	not_ignored_title = True
-	for ignored_title in ignored_titles:
-		if ignored_title.lower() in issue["title"].lower():
-			not_ignored_title = False
-			break
-
-	return not_pull_request and not_ignored_label and not_ignored_title
+	return not "pull_request" in issue
 
 
 def validator(issue, headers, config):
@@ -53,6 +41,15 @@ def validator(issue, headers, config):
 	:param config: config to use
 	:return: true if issue validates, false otherwise
 	"""
+
+	ignored_label = len(set(config["ignored_labels"]).intersection(set(map(lambda x: x["name"], issue["labels"])))) > 0
+	if ignored_label:
+		return True
+
+	for ignored_title in config["ignored_titles"]:
+		if ignored_title.lower() in issue["title"].lower():
+			return True
+
 	if config["phrase"].lower() in issue["body"].lower():
 		return True
 
@@ -192,7 +189,7 @@ def check_issues(config, file=None, dryrun=False):
 
 	# calculate grace period cutoff date, if grace period and label are configured
 	if config["grace_period"] >= 0 and "label" in config and config["label"]:
-		grace_period_cutoff = datetime.datetime.utcnow().replace(tzinfo=dateutil.tz.tzutc()) - datetime.timedelta(config["grace_period"])
+		grace_period_cutoff = datetime.datetime.utcnow().replace(tzinfo=dateutil.tz.tzutc()) - (datetime.timedelta(config["grace_period"] + 1))
 		bot_user_id = get_bot_id(headers)
 		since = min(config["since"], grace_period_cutoff)
 	else:
@@ -201,9 +198,10 @@ def check_issues(config, file=None, dryrun=False):
 		since = config["since"]
 
 	# retrieve issues to process
+	print("Fetching all issues since %s" % since.isoformat())
 	url = ISSUES_URL.format(repo=config["repo"], since=since.isoformat())
 	r = requests.get(url, headers=headers)
-	issues = filter(lambda x: issue_filter(x, ignored_labels=config["ignored_labels"], ignored_titles=config["ignored_titles"]), r.json())
+	issues = filter(issue_filter, r.json())
 	print("Found %d issues to process..." % len(issues))
 
 	# process each issue
@@ -413,7 +411,7 @@ def main():
 		config["reminder"] = args.reminder
 	if args.closing is not None:
 		config["closing"] = args.closing
-	config["dryrun"] = config["dryrun"] or args.dryrun
+	config["dryrun"] = config["dryrun"] if "dryrun" in config else False or args.dryrun
 
 	# validate the config
 	validate_config(config)
