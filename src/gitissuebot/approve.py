@@ -17,6 +17,10 @@ USER_URL = "https://api.github.com/user"
 ISSUES_URL = "https://api.github.com/repos/{repo}/issues?state=open&since={since}"
 
 
+class OldPhrase(Exception):
+	pass
+
+
 ##~~ some helpers
 
 
@@ -50,8 +54,13 @@ def validator(issue, headers, config):
 		if ignored_title.lower() in issue["title"].lower():
 			return True
 
-	if config["phrase"].lower() in issue["body"].lower():
+	lower_body = issue["body"].lower()
+	if config["phrase"].lower() in lower_body:
 		return True
+	elif len(config["past_phrases"]) > 0:
+		for phrase in config["past_phrases"]:
+			if phrase.lower() in lower_body:
+				raise OldPhrase()
 
 	author = issue["user"]["id"]
 
@@ -135,6 +144,24 @@ def add_reminder(issue, headers, config, dryrun):
 			print("\t\tPATCH %s to set labels=%r" % (issue["url"], current_labels))
 
 
+def add_oldphrasehint(issue, headers, config, dryrun):
+	"""
+	Adds a hint that the used trigger phrase has been marked as obsolete.
+
+	:param issue: the issue to add a reminder to
+	:param headers: headers to use for requests against API
+	:param config: config to use
+	:param dryrun: whether to only simulate the writing API calls
+	"""
+
+	personalized_hint = config["newphrase"].format(author=issue["author"])
+
+	# post a comment
+	if not dryrun:
+		requests.post(issue["comments_url"], headers=headers, data=json.dumps({"body": personalized_hint}))
+	else:
+		print("\t\tPOST %s to add old phrase hint comment" % issue["comments_url"])
+
 
 def mark_issue_valid(issue, headers, config, dryrun):
 	"""
@@ -210,7 +237,11 @@ def check_issues(config, file=None, dryrun=False):
 
 		print(u"Processing \"%s\" by %s (created %s, last updated %s)" % (internal["title"], internal["author"], internal["created_str"], internal["updated_str"]))
 
-		valid = validator(issue, headers, config)
+		try:
+			valid = validator(issue, headers, config)
+		except OldPhrase:
+			add_oldphrasehint(internal, headers, config, dryrun)
+			valid = True
 
 		if "label" in config and config["label"] and config["label"] in internal["labels"]:
 			# issue is currently labeled as incomplete, let's see if the information has been added or if it's still missing
@@ -313,6 +344,12 @@ def validate_config(config):
 	if not "phrase" in config or not config["phrase"]:
 		config["phrase"] = "I love cookies"
 
+	if not "past_phrases" in config or not config["past_phrases"]:
+		config["past_phrases"] = []
+	else:
+		if not "newphrase" in config or not config["newphrase"]:
+			print("New phrase text must be defined", file=sys.stderr)
+
 	# sanitizing
 	if config["since"].tzinfo is None:
 		config["since"] = config["since"].replace(tzinfo=dateutil.tz.tzutc())
@@ -361,10 +398,14 @@ def main():
 						help="The github repository to use, must be defined either on CLI or via config")
 	parser.add_argument("--reminder", action="store", dest="reminder",
 						help="Text of comment to remind people of missing information, must be defined either on CLI or via config")
+	parser.add_argument("--newphrase", action="store", dest="newphrase",
+						help="Text of comment to approve comment but hint at new trigger phrase, must be defined if past phrases are defined, either on CLI or via config")
 	parser.add_argument("-s", "--since", action="store", dest="since", type=dateutil.parser.parse,
 						help="Only validate issues created or updated after this ISO8601 date time, defaults to now")
 	parser.add_argument("-p", "--phrase", action="store", dest="phrase",
 						help="Trigger phrase to look for in comments to approve, defaults to \"I love cookies\"")
+	parser.add_argument("-P", "--past-phrases", action="store", dest="past_phrases",
+						help="Past trigger phrases to look for in comments to approve, defaults to empty list")
 	parser.add_argument("-g", "--grace", action="store", dest="grace_period", type=int,
 						help="Grace period in days after which to close issues lacking information, set to -1 to never autoclose, defaults to 14 days. Note: Automatic closing only works if label is set")
 	parser.add_argument("-l", "--label", action="store", dest="label",
@@ -407,6 +448,8 @@ def main():
 		config["grace_period"] = args.grace_period
 	if args.phrase is not None:
 		config["phrase"] = args.phrase
+	if args.past_phrases is not None:
+		config["past_phrases"] = filter(lambda x: x is not None and len(x) > 0, map(str.strip, args.past_phrases.split(",")))
 	if args.reminder is not None:
 		config["reminder"] = args.reminder
 	if args.closing is not None:

@@ -31,6 +31,10 @@ ignored_titles:
 - '[Question]'
 - '[Misc]'
 
+# Past trigger phrases to still consider valid but for which to post a hint that something changed
+past_phrases:
+- I love brownies
+
 # Reminder to add to incomplete issues
 reminder: 'Hi @{author},
 
@@ -59,6 +63,23 @@ reminder: 'Hi @{author},
 closing: 'Since apparently some of the required information is still missing, I''m
   closing this now, sorry. Feel free to reopen this or create a new issue once you
   can provide **all** required information.
+
+  '
+
+# Comment to add to hint people at new phrase
+newphrase: 'Hi @{author},
+
+
+  Just FYI, there have been some changes to the contribution guidelines, you are not completely
+  up to date with your ticket structure :) I''ll still mark this as valid, but please take a moment
+  to review the new guidelines. Thank you!
+
+  Best regards,
+
+  ~ Your friendly GitIssueBot
+
+
+  PS: I''m just an automated script, not a human being.
 
   '
 
