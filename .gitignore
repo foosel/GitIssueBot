@@ -13,3 +13,4 @@ dist
 pypy
 GitIssueBot.egg-info
 *.orig
+configs
