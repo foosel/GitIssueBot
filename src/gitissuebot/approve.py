@@ -221,7 +221,15 @@ def check_issues(config, file=None, dryrun=False):
 			try:
 				valid = validator(issue, headers, config)
 			except OldPhrase:
-				add_oldphrasehint(internal, headers, config, dryrun)
+				# find the last comment made by the bot
+				r = requests.get(internal["comments_url"], headers=headers)
+				comments = r.json()
+				bot_comment = None
+				for comment in comments:
+					if comment["user"]["id"] == bot_user_id:
+						bot_comment = comment
+				if bot_comment is None:
+					add_oldphrasehint(internal, headers, config, dryrun)
 				valid = True
 
 			if "label" in config and config["label"] and config["label"] in internal["labels"]:
@@ -318,7 +326,8 @@ def validate_config(config):
 		config["past_phrases"] = []
 	else:
 		if not "newphrase" in config or not config["newphrase"]:
-			logger.info("New phrase text must be defined", file=sys.stderr)
+			logger.error("New phrase text must be defined")
+			sys.exit(-1)
 
 	# sanitizing
 	if config["since"].tzinfo is None:
@@ -405,9 +414,9 @@ def main():
 		config["closing"] = args.closing
 	if args.closingnow is not None:
 		config["closingnow"] = args.closingnow
-	config["close_directly"] = config["close_directly"] if "close_directly" in config else False or args.close_directly
-	config["dryrun"] = config["dryrun"] if "dryrun" in config else False or args.dryrun
-	config["debug"] = config["debug"] if "debug" in config else False or args.debug
+	config["close_directly"] = config["close_directly"] if "close_directly" in config and config["close_directly"] else False or args.close_directly
+	config["dryrun"] = config["dryrun"] if "dryrun" in config and config["dryrun"] else False or args.dryrun
+	config["debug"] = config["debug"] if "debug" in config and config["debug"] else False or args.debug
 
 	# validate the config
 	validate_config(config)
