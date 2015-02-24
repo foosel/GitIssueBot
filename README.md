@@ -135,7 +135,7 @@ access to repo and -- if the issue of a private repository are to be managed -- 
 You will need to regularly execute the approve script, I recommend creating a cronjob for that and then let it do
 its job daily or weekly or something like that.
 
-## Approve
+## Autolabel
 
 ``gitissuebot autolabel`` allows to check any newly added or updated issues on the GitHub issue tracker for certain
 tags in the title and apply labels based on the presence of these tags, thus allowing users to categorize their
