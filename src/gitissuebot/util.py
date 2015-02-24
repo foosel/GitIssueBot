@@ -189,3 +189,7 @@ def update_config(filename, since=datetime.datetime.utcnow()):
 		logger.info("Saved current date and time for next run")
 
 
+def print_version():
+	from gitissuebot import _version
+	print(_version.get_versions()["version"])
+	sys.exit(0)

@@ -12,13 +12,7 @@ import time
 import datetime
 import sys
 
-if __package__ is None:
-	import sys
-	from os import path
-	sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
-	from util import get_issues, load_config, update_config, get_bot_id, convert_to_internal, no_pullrequests, setup_logging
-else:
-	from .util import get_issues, load_config, update_config, get_bot_id, convert_to_internal, no_pullrequests, setup_logging
+from .util import get_issues, load_config, update_config, get_bot_id, convert_to_internal, no_pullrequests, setup_logging, print_version
 
 
 import logging
@@ -337,56 +331,15 @@ def validate_config(config):
 ##~~ CLI
 
 
-def main():
-	import argparse
-
-	# prepare CLI argument parser
-	parser = argparse.ArgumentParser(prog="gitissuebot-approve")
-	parser.add_argument("-c", "--config", action="store", dest="config",
-						help="The config file to use")
-	parser.add_argument("-t", "--token", action="store", dest="token",
-						help="The token to use, must be defined either on CLI or via config")
-	parser.add_argument("-r", "--repo", action="store", dest="repo",
-						help="The github repository to use, must be defined either on CLI or via config")
-	parser.add_argument("--reminder", action="store", dest="reminder",
-						help="Text of comment to remind people of missing information, must be defined either on CLI or via config")
-	parser.add_argument("--newphrase", action="store", dest="newphrase",
-						help="Text of comment to approve comment but hint at new trigger phrase, must be defined if past phrases are defined, either on CLI or via config")
-	parser.add_argument("-s", "--since", action="store", dest="since", type=dateutil.parser.parse,
-						help="Only validate issues created or updated after this ISO8601 date time, defaults to now")
-	parser.add_argument("-p", "--phrase", action="store", dest="phrase",
-						help="Trigger phrase to look for in comments to approve, defaults to \"I love cookies\"")
-	parser.add_argument("-P", "--past-phrases", action="store", dest="past_phrases",
-						help="Past trigger phrases to look for in comments to approve, defaults to empty list")
-	parser.add_argument("-g", "--grace", action="store", dest="grace_period", type=int,
-						help="Grace period in days after which to close issues lacking information, set to -1 to never autoclose, defaults to 14 days. Note: Automatic closing only works if label is set")
-	parser.add_argument("-k", "--close", action="store_true", dest="close_directly",
-						help="Directly close invalid tickets instead of applying grace period")
-	parser.add_argument("-l", "--label", action="store", dest="label",
-						help="Label to apply to issues missing information, can be left out if such issues are not be labeled specially. Defaults to not set. Note: Specified label must exist in the targeted repo!")
-	parser.add_argument("--ignored-labels", action="store", dest="ignored_labels",
-						help="Comma-separated list of labels tagging issues to ignore during processing (e.g. feature requests), defaults to an empty list")
-	parser.add_argument("--ignored-titles", action="store", dest="ignored_titles",
-						help="Comma-separated list of issue title parts which should cause the issue to be ignored (e.g. \"[Feature Request]\"), defaults to an empty list")
-	parser.add_argument("--closing", action="store", dest="closing",
-						help="Text of comment when closing an issue after the grace period, defaults to not set and thus no comment being posted upon closing.")
-	parser.add_argument("--closingnow", action="store", dest="closingnow",
-						help="Text of comment when closing an issue directly, defaults to not set and thus no comment being posted upon closing.")
-	parser.add_argument("--dry-run", action="store_true", dest="dryrun",
-						help="Just print what would be done without actually doing it")
-	parser.add_argument("-v", "--version", action="store_true", dest="version",
-						help="Print the version and exit")
-	parser.add_argument("--debug", action="store_true", dest="debug",
-	                    help="Enable debug logging")
-
-	# parse CLI arguments
-	args = parser.parse_args()
+def main(args=None):
+	if args is None:
+		# parse CLI arguments
+		parser = argparser()
+		args = parser.parse_args()
 
 	# if only version is to be printed, do so and exit
 	if args.version:
-		from gitissuebot import _version
-		logger.info(_version.get_versions()["version"])
-		sys.exit(0)
+		print_version()
 
 	# merge config (if given) and CLI parameters
 	config = load_config(args.config)
@@ -427,6 +380,50 @@ def main():
 	# check existing issues
 	check_issues(config, file=args.config, dryrun=config["dryrun"])
 
+def argparser(parser=None):
+	if parser is None:
+		import argparse
+		parser = argparse.ArgumentParser(prog="gitissuebot-approve")
+
+	# prepare CLI argument parser
+	parser.add_argument("-c", "--config", action="store", dest="config",
+	                    help="The config file to use")
+	parser.add_argument("-t", "--token", action="store", dest="token",
+	                    help="The token to use, must be defined either on CLI or via config")
+	parser.add_argument("-r", "--repo", action="store", dest="repo",
+	                    help="The github repository to use, must be defined either on CLI or via config")
+	parser.add_argument("--reminder", action="store", dest="reminder",
+	                    help="Text of comment to remind people of missing information, must be defined either on CLI or via config")
+	parser.add_argument("--newphrase", action="store", dest="newphrase",
+	                    help="Text of comment to approve comment but hint at new trigger phrase, must be defined if past phrases are defined, either on CLI or via config")
+	parser.add_argument("-s", "--since", action="store", dest="since", type=dateutil.parser.parse,
+	                    help="Only validate issues created or updated after this ISO8601 date time, defaults to now")
+	parser.add_argument("-p", "--phrase", action="store", dest="phrase",
+	                    help="Trigger phrase to look for in comments to approve, defaults to \"I love cookies\"")
+	parser.add_argument("-P", "--past-phrases", action="store", dest="past_phrases",
+	                    help="Past trigger phrases to look for in comments to approve, defaults to empty list")
+	parser.add_argument("-g", "--grace", action="store", dest="grace_period", type=int,
+	                    help="Grace period in days after which to close issues lacking information, set to -1 to never autoclose, defaults to 14 days. Note: Automatic closing only works if label is set")
+	parser.add_argument("-k", "--close", action="store_true", dest="close_directly",
+	                    help="Directly close invalid tickets instead of applying grace period")
+	parser.add_argument("-l", "--label", action="store", dest="label",
+	                    help="Label to apply to issues missing information, can be left out if such issues are not be labeled specially. Defaults to not set. Note: Specified label must exist in the targeted repo!")
+	parser.add_argument("--ignored-labels", action="store", dest="ignored_labels",
+	                    help="Comma-separated list of labels tagging issues to ignore during processing (e.g. feature requests), defaults to an empty list")
+	parser.add_argument("--ignored-titles", action="store", dest="ignored_titles",
+	                    help="Comma-separated list of issue title parts which should cause the issue to be ignored (e.g. \"[Feature Request]\"), defaults to an empty list")
+	parser.add_argument("--closing", action="store", dest="closing",
+	                    help="Text of comment when closing an issue after the grace period, defaults to not set and thus no comment being posted upon closing.")
+	parser.add_argument("--closingnow", action="store", dest="closingnow",
+	                    help="Text of comment when closing an issue directly, defaults to not set and thus no comment being posted upon closing.")
+	parser.add_argument("--dry-run", action="store_true", dest="dryrun",
+	                    help="Just print what would be done without actually doing it")
+	parser.add_argument("-v", "--version", action="store_true", dest="version",
+	                    help="Print the version and exit")
+	parser.add_argument("--debug", action="store_true", dest="debug",
+	                    help="Enable debug logging")
+
+	return parser
 
 if __name__ == "__main__":
 	main()

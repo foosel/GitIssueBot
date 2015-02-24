@@ -6,7 +6,7 @@ in the works.
 
 ## Approve
 
-``gitissuebot-approve`` allows to check any newly added or updated issues on the GitHub issue tracker whether the author included
+``gitissuebot approve`` allows to check any newly added or updated issues on the GitHub issue tracker whether the author included
 a customizable phrase to be found in the contribution guidelines to check whether the user has read those guidelines.
 The phrase may be included either in the body of the ticket or -- if it's not there -- be included as part of a comment
 by the issue's **original author** to the issue. 
@@ -23,7 +23,7 @@ too.
 
 ### Configuration
 
-Configuration of the bot can be done either completely via the command line (see `gitissue-approve --help` for a list
+Configuration of the bot can be done either completely via the command line (see `gitissue approve --help` for a list
 of available arguments) or by supplying a configuration file via the `--config` command line argument from which to 
 take the configuration.
 
@@ -137,14 +137,14 @@ its job daily or weekly or something like that.
 
 ## Approve
 
-``gitissuebot-autolabel`` allows to check any newly added or updated issues on the GitHub issue tracker for certain
+``gitissuebot autolabel`` allows to check any newly added or updated issues on the GitHub issue tracker for certain
 tags in the title and apply labels based on the presence of these tags, thus allowing users to categorize their
 issues themselves (by including the tag in the title), which otherwise is only possible for registered contributors
 on Github.
 
 ### Configuration
 
-Configuration of the bot can be done either completely via the command line (see `gitissue-autolabel --help` for a list
+Configuration of the bot can be done either completely via the command line (see `gitissue autolabel --help` for a list
 of available arguments) or by supplying a configuration file via the `--config` command line argument from which to
 take the configuration.
 

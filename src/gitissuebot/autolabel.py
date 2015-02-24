@@ -11,14 +11,7 @@ import sys
 import datetime
 import dateutil.parser
 
-
-if __package__ is None:
-	import sys
-	from os import path
-	sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
-	from util import get_issues, load_config, update_config, no_pullrequests, convert_to_internal, setup_logging
-else:
-	from .util import get_issues, load_config, update_config, no_pullrequests, convert_to_internal, setup_logging
+from .util import get_issues, load_config, update_config, no_pullrequests, convert_to_internal, setup_logging, print_version
 
 import logging
 logger = logging.getLogger(__name__)
@@ -104,45 +97,15 @@ def validate_config(config):
 ##~~ CLI
 
 
-def main():
-	import argparse
-
-	def label_dict(raw):
-		if not "=" in raw:
-			raise argparse.ArgumentTypeError("{raw} doesn't follow the expected format '<tag>=<label>'".format(raw=raw))
-
-		tag, label = raw.split("=", 2)
-		return dict(tag=tag, label=label)
-
-	# prepare CLI argument parser
-	parser = argparse.ArgumentParser(prog="gitissuebot-approve")
-	parser.add_argument("-c", "--config", action="store", dest="config",
-	                    help="The config file to use")
-	parser.add_argument("-t", "--token", action="store", dest="token",
-	                    help="The token to use, must be defined either on CLI or via config")
-	parser.add_argument("-r", "--repo", action="store", dest="repo",
-	                    help="The github repository to use, must be defined either on CLI or via config")
-	parser.add_argument("-s", "--since", action="store", dest="since", type=dateutil.parser.parse,
-	                    help="Only validate issues created or updated after this ISO8601 date time, defaults to now")
-	parser.add_argument("-m", "--map", action="append", dest="mappings", type=label_dict,
-	                    help="Tag-label-mappings to use. Expected format is '<tag>=<label>'")
-	parser.add_argument("-i", "--ignore-case", action="store_true", dest="ignore_case",
-	                    help="Ignore case when matching the title snippets")
-	parser.add_argument("--dry-run", action="store_true", dest="dryrun",
-	                    help="Just print what would be done without actually doing it")
-	parser.add_argument("-v", "--version", action="store_true", dest="version",
-	                    help="Print the version and exit")
-	parser.add_argument("--debug", action="store_true", dest="debug",
-	                    help="Enable debug logging")
-
-	# parse CLI arguments
-	args = parser.parse_args()
+def main(args=None):
+	if args is None:
+		# parse CLI arguments
+		parser = argparser()
+		args = parser.parse_args()
 
 	# if only version is to be printed, do so and exit
 	if args.version:
-		from gitissuebot import _version
-		logger.info(_version.get_versions()["version"])
-		sys.exit(0)
+		print_version()
 
 	# merge config (if given) and CLI parameters
 	config = load_config(args.config)
@@ -165,6 +128,39 @@ def main():
 	# process existing issues
 	process_issues(config, file=args.config, dryrun=config["dryrun"])
 
+def argparser(parser=None):
+	if parser is None:
+		import argparse
+		parser = argparse.ArgumentParser(prog="gitissuebot-approve")
+
+	def label_dict(raw):
+		if not "=" in raw:
+			raise argparse.ArgumentTypeError("{raw} doesn't follow the expected format '<tag>=<label>'".format(raw=raw))
+
+		tag, label = raw.split("=", 2)
+		return dict(tag=tag, label=label)
+
+	# prepare CLI argument parser
+	parser.add_argument("-c", "--config", action="store", dest="config",
+	                    help="The config file to use")
+	parser.add_argument("-t", "--token", action="store", dest="token",
+	                    help="The token to use, must be defined either on CLI or via config")
+	parser.add_argument("-r", "--repo", action="store", dest="repo",
+	                    help="The github repository to use, must be defined either on CLI or via config")
+	parser.add_argument("-s", "--since", action="store", dest="since", type=dateutil.parser.parse,
+	                    help="Only validate issues created or updated after this ISO8601 date time, defaults to now")
+	parser.add_argument("-m", "--map", action="append", dest="mappings", type=label_dict,
+	                    help="Tag-label-mappings to use. Expected format is '<tag>=<label>'")
+	parser.add_argument("-i", "--ignore-case", action="store_true", dest="ignore_case",
+	                    help="Ignore case when matching the title snippets")
+	parser.add_argument("--dry-run", action="store_true", dest="dryrun",
+	                    help="Just print what would be done without actually doing it")
+	parser.add_argument("-v", "--version", action="store_true", dest="version",
+	                    help="Print the version and exit")
+	parser.add_argument("--debug", action="store_true", dest="debug",
+	                    help="Enable debug logging")
+
+	return parser
 
 if __name__ == "__main__":
 	main()
