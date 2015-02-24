@@ -187,7 +187,8 @@ def mark_issue_valid(issue, headers, config, dryrun):
 
 def close_issue(issue, headers, config, dryrun):
 	"""
-	Closes an issue.
+	Closes an issue after the grace period. Uses the text defined for ``closing`` in the configuration for the
+	closing comment.
 
 	:param issue: the issue to close
 	:param headers: headers to use for requests against API
@@ -195,10 +196,34 @@ def close_issue(issue, headers, config, dryrun):
 	:param dryrun: whether to only simulate the writing API calls
 	"""
 
-	# post a comment if configured
+	body = None
 	if "closing" in config and config["closing"]:
+		body = config["closing"]
+
+	_close(issue, headers, body, dryrun)
+
+
+def directly_close_issue(issue, headers, config, dryrun):
+	"""
+	Closes an issue directly. Uses the text defined for ``closingnow`` in the configuration for the closing comment.
+
+	:param issue: the issue to close
+	:param headers: headers to use for requests against API
+	:param config: config to use
+	:param dryrun: whether to only simulate the writing API calls
+	"""
+
+	body = None
+	if "closingnow" in config and config["closingnow"]:
+		body = config["closingnow"].format(author=issue["author"])
+
+	_close(issue, headers, body, dryrun)
+
+
+def _close(issue, headers, body, dryrun):
+	if body is not None:
 		if not dryrun:
-			requests.post(issue["comments_url"], headers=headers, data=json.dumps({"body": config["closing"]}))
+			requests.post(issue["comments_url"], headers=headers, data=json.dumps({"body": body}))
 		else:
 			print("\t\tPOST %s to add closing comment" % issue["comments_url"])
 
@@ -216,13 +241,15 @@ def check_issues(config, file=None, dryrun=False):
 
 	# calculate grace period cutoff date, if grace period and label are configured
 	if config["grace_period"] >= 0 and "label" in config and config["label"]:
-		grace_period_cutoff = datetime.datetime.utcnow().replace(tzinfo=dateutil.tz.tzutc()) - (datetime.timedelta(config["grace_period"] + 1))
+		grace_period_cutoff = datetime.datetime.utcnow().replace(tzinfo=dateutil.tz.tzutc()) - (datetime.timedelta(config["grace_period"] + 2))
 		bot_user_id = get_bot_id(headers)
 		since = min(config["since"], grace_period_cutoff)
 	else:
 		grace_period_cutoff = None
 		bot_user_id = None
 		since = config["since"]
+
+	close_directly = config["close_directly"]
 
 	# retrieve issues to process
 	print("Fetching all issues since %s" % since.isoformat())
@@ -271,9 +298,15 @@ def check_issues(config, file=None, dryrun=False):
 						close_issue(internal, headers, config, dryrun)
 
 		elif internal["created"] >= config["since"] and not valid:
-			# issue was created since last run and is invalid => add a friendly comment and label the issue correspondingly
-			print("\t... reminding author of information to include")
-			add_reminder(internal, headers, config, dryrun)
+			# issue was created since last run and is invalid
+			if close_directly:
+				# we close tickets directly => add a comment and close the ticket
+				print("\t... information is missing, closing the ticket")
+				directly_close_issue(internal, headers, config, dryrun)
+			else:
+				# we don't close tickets directly => add a friendly comment and label the issue correspondingly
+				print("\t... reminding author of information to include")
+				add_reminder(internal, headers, config, dryrun)
 
 	if file is not None and not dryrun:
 		# we are using a config file, so we save the current date and time for the next run
@@ -333,8 +366,12 @@ def validate_config(config):
 		config["since"] = datetime.datetime.utcnow()
 	if not "grace_period" in config or config["grace_period"] is None:
 		config["grace_period"] = 14
+	if not "close_directly" in config or config["close_directly"] is None:
+		config["close_directly"] = False
 	if not "closing" in config or not config["closing"]:
 		config["closing"] = None
+	if not "closingnow" in config or not config["closingnow"]:
+		config["closingnow"] = None
 	if not "ignored_labels" in config:
 		config["ignored_labels"] = ()
 	if not "ignored_titles" in config:
@@ -408,6 +445,8 @@ def main():
 						help="Past trigger phrases to look for in comments to approve, defaults to empty list")
 	parser.add_argument("-g", "--grace", action="store", dest="grace_period", type=int,
 						help="Grace period in days after which to close issues lacking information, set to -1 to never autoclose, defaults to 14 days. Note: Automatic closing only works if label is set")
+	parser.add_argument("-k", "--close", action="store_true", dest="close_directly",
+						help="Directly close invalid tickets instead of applying grace period")
 	parser.add_argument("-l", "--label", action="store", dest="label",
 						help="Label to apply to issues missing information, can be left out if such issues are not be labeled specially. Defaults to not set. Note: Specified label must exist in the targeted repo!")
 	parser.add_argument("--ignored-labels", action="store", dest="ignored_labels",
@@ -416,6 +455,8 @@ def main():
 						help="Comma-separated list of issue title parts which should cause the issue to be ignored (e.g. \"[Feature Request]\"), defaults to an empty list")
 	parser.add_argument("--closing", action="store", dest="closing",
 						help="Text of comment when closing an issue after the grace period, defaults to not set and thus no comment being posted upon closing.")
+	parser.add_argument("--closingnow", action="store", dest="closingnow",
+						help="Text of comment when closing an issue directly, defaults to not set and thus no comment being posted upon closing.")
 	parser.add_argument("--dry-run", action="store_true", dest="dryrun",
 						help="Just print what would be done without actually doing it")
 	parser.add_argument("-v", "--version", action="store_true", dest="version",
@@ -454,6 +495,9 @@ def main():
 		config["reminder"] = args.reminder
 	if args.closing is not None:
 		config["closing"] = args.closing
+	if args.closingnow is not None:
+		config["closingnow"] = args.closingnow
+	config["close_directly"] = config["close_directly"] if "close_directly" in config else False or args.close_directly
 	config["dryrun"] = config["dryrun"] if "dryrun" in config else False or args.dryrun
 
 	# validate the config
