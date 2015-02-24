@@ -12,9 +12,17 @@ import time
 import datetime
 import sys
 
-# Github API URLs
-USER_URL = "https://api.github.com/user"
-ISSUES_URL = "https://api.github.com/repos/{repo}/issues?state=open"
+if __package__ is None:
+	import sys
+	from os import path
+	sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
+	from util import get_issues, load_config, update_config, get_bot_id, convert_to_internal, no_pullrequests, setup_logging
+else:
+	from .util import get_issues, load_config, update_config, get_bot_id, convert_to_internal, no_pullrequests, setup_logging
+
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 class OldPhrase(Exception):
@@ -22,17 +30,6 @@ class OldPhrase(Exception):
 
 
 ##~~ some helpers
-
-
-def issue_filter(issue):
-	"""
-	Filters the given issue, returns True iff issue is not a pull request
-
-	:param issue: the issue to filter
-	:return: true if issue matches the filter (see above), false otherwise
-	"""
-
-	return not "pull_request" in issue
 
 
 def validator(issue, headers, config):
@@ -74,43 +71,6 @@ def validator(issue, headers, config):
 	return False
 
 
-def convert_to_internal(issue):
-	"""
-	Converts the issue to an internal (more flattened) representation.
-
-	Converts created and updated fields to datetime objects and flattens labels and author.
-
-	:param issue: the issue to convert
-	:return: the converted issue
-	"""
-
-	return {
-		"title": issue["title"],
-		"author": issue["user"]["login"],
-		"created_str": issue["created_at"],
-		"created": dateutil.parser.parse(issue["created_at"]),
-		"updated_str": issue["updated_at"],
-		"updated": dateutil.parser.parse(issue["updated_at"]),
-		"labels": map(lambda x: x["name"], issue["labels"]),
-		"comments": issue["comments"],
-		"comments_url": issue["comments_url"],
-		"url": issue["url"]
-	}
-
-
-def get_bot_id(headers):
-	"""
-	Retrieves the id of the bot.
-
-	:param headers: headers to use for requests against API
-	:return: the bot's user id
-	"""
-
-	r = requests.get(USER_URL, headers=headers)
-	myself = r.json()
-	return myself["id"]
-
-
 ##~~ issue processing
 
 
@@ -128,20 +88,18 @@ def add_reminder(issue, headers, config, dryrun):
 	personalized_reminder = config["reminder"].format(author=issue["author"], until=until.strftime("%Y-%m-%d %H:%M"))
 
 	# post a comment
+	logger.debug("-> Adding a reminder comment via POST %s" % issue["comments_url"])
 	if not dryrun:
 		requests.post(issue["comments_url"], headers=headers, data=json.dumps({"body": personalized_reminder}))
-	else:
-		print("\t\tPOST %s to add reminder comment" % issue["comments_url"])
 
 	# label the issue if configured
 	if "label" in config and config["label"]:
 		current_labels = list(issue["labels"])
 		current_labels.append(config["label"])
 
+		logger.debug("-> Marking issues as invalid via PATCH %s, labels=%r" % (issue["url"], current_labels))
 		if not dryrun:
 			requests.patch(issue["url"], headers=headers, data=json.dumps({"labels": current_labels}))
-		else:
-			print("\t\tPATCH %s to set labels=%r" % (issue["url"], current_labels))
 
 
 def add_oldphrasehint(issue, headers, config, dryrun):
@@ -157,10 +115,9 @@ def add_oldphrasehint(issue, headers, config, dryrun):
 	personalized_hint = config["newphrase"].format(author=issue["author"])
 
 	# post a comment
+	logger.debug("-> Adding a old phrase hint comment via POST %s" % issue["comments_url"])
 	if not dryrun:
 		requests.post(issue["comments_url"], headers=headers, data=json.dumps({"body": personalized_hint}))
-	else:
-		print("\t\tPOST %s to add old phrase hint comment" % issue["comments_url"])
 
 
 def mark_issue_valid(issue, headers, config, dryrun):
@@ -179,10 +136,10 @@ def mark_issue_valid(issue, headers, config, dryrun):
 
 	current_labels = list(issue["labels"])
 	current_labels.remove(config["label"])
+
+	logger.debug("-> Marking issue valid via PATCH %s, labels=%r" % (issue["url"], current_labels))
 	if not dryrun:
 		requests.patch(issue["url"], headers=headers, data=json.dumps({"labels": current_labels}))
-	else:
-		print("\t\tPATCH %s to set labels=%r" % (issue["url"], current_labels))
 
 
 def close_issue(issue, headers, config, dryrun):
@@ -222,16 +179,14 @@ def directly_close_issue(issue, headers, config, dryrun):
 
 def _close(issue, headers, body, dryrun):
 	if body is not None:
+		logger.debug("-> Adding a closing comment via POST %s" % issue["comments_url"])
 		if not dryrun:
 			requests.post(issue["comments_url"], headers=headers, data=json.dumps({"body": body}))
-		else:
-			print("\t\tPOST %s to add closing comment" % issue["comments_url"])
 
 	# close the issue
+	logger.debug("-> Closing issue via PATCH %s, state=closed" % issue["url"])
 	if not dryrun:
 		requests.patch(issue["url"], headers=headers, data=json.dumps({"state": "closed"}))
-	else:
-		print("\t\tPATCH %s to set state=closed" % issue["url"])
 
 
 def check_issues(config, file=None, dryrun=False):
@@ -241,7 +196,7 @@ def check_issues(config, file=None, dryrun=False):
 
 	# calculate grace period cutoff date, if grace period and label are configured
 	if config["grace_period"] >= 0 and "label" in config and config["label"]:
-		grace_period_cutoff = datetime.datetime.utcnow().replace(tzinfo=dateutil.tz.tzutc()) - (datetime.timedelta(config["grace_period"] + 2))
+		grace_period_cutoff = datetime.datetime.utcnow().replace(tzinfo=dateutil.tz.tzutc()) - (datetime.timedelta(config["grace_period"] + 1))
 		bot_user_id = get_bot_id(headers)
 		since = min(config["since"], grace_period_cutoff)
 	else:
@@ -252,61 +207,62 @@ def check_issues(config, file=None, dryrun=False):
 	close_directly = config["close_directly"]
 
 	# retrieve issues to process
-	print("Fetching all issues since %s" % since.isoformat())
-	url = ISSUES_URL.format(repo=config["repo"])
-	r = requests.get(url, headers=headers)
-	issues = filter(issue_filter, r.json())
-	print("Found %d issues to process..." % len(issues))
+	logger.info("Fetching all issues since %s" % since.isoformat())
+	issues = get_issues(config["token"], config["repo"], issue_filter=no_pullrequests, since=since)
+	logger.info("Found %d issues to process..." % len(issues))
 
 	# process each issue
 	for issue in issues:
 		internal = convert_to_internal(issue)
 
-		print(u"Processing \"%s\" by %s (created %s, last updated %s)" % (internal["title"], internal["author"], internal["created_str"], internal["updated_str"]))
+		logger.info(u"Processing \"%s\" by %s (created %s, last updated %s)" % (internal["title"], internal["author"], internal["created_str"], internal["updated_str"]))
 
 		try:
-			valid = validator(issue, headers, config)
-		except OldPhrase:
-			add_oldphrasehint(internal, headers, config, dryrun)
-			valid = True
+			try:
+				valid = validator(issue, headers, config)
+			except OldPhrase:
+				add_oldphrasehint(internal, headers, config, dryrun)
+				valid = True
 
-		if "label" in config and config["label"] and config["label"] in internal["labels"]:
-			# issue is currently labeled as incomplete, let's see if the information has been added or if it's still missing
-			if valid:
-				# issue is now valid => remove the label marking it as lacking information
-				print("\t... author updated ticket with information, marking valid")
-				mark_issue_valid(internal, headers, config, dryrun)
+			if "label" in config and config["label"] and config["label"] in internal["labels"]:
+				# issue is currently labeled as incomplete, let's see if the information has been added or if it's still missing
+				if valid:
+					# issue is now valid => remove the label marking it as lacking information
+					logger.info("... author updated ticket with information, marking valid")
+					mark_issue_valid(internal, headers, config, dryrun)
 
-			elif grace_period_cutoff is not None:
-				# issue is invalid, let's see if the grace period for this issue has been exceeded and we can close it
+				elif grace_period_cutoff is not None:
+					# issue is invalid, let's see if the grace period for this issue has been exceeded and we can close it
 
-				# find the last comment made by the bot
-				r = requests.get(internal["comments_url"], headers=headers)
-				comments = r.json()
-				bot_comment = None
-				for comment in comments:
-					if comment["user"]["id"] == bot_user_id:
-						bot_comment = comment
+					# find the last comment made by the bot
+					r = requests.get(internal["comments_url"], headers=headers)
+					comments = r.json()
+					bot_comment = None
+					for comment in comments:
+						if comment["user"]["id"] == bot_user_id:
+							bot_comment = comment
 
-				if bot_comment is not None:
-					# we found the last comment by our bot, let's check if the grace period is over
-					comment_creation_datetime = dateutil.parser.parse(bot_comment["created_at"])
+					if bot_comment is not None:
+						# we found the last comment by our bot, let's check if the grace period is over
+						comment_creation_datetime = dateutil.parser.parse(bot_comment["created_at"])
 
-					if grace_period_cutoff > comment_creation_datetime:
-						# grace period is over, let's post a comment and close the issue
-						print("\t... information still missing after grace period, closing the issue")
-						close_issue(internal, headers, config, dryrun)
+						if grace_period_cutoff > comment_creation_datetime:
+							# grace period is over, let's post a comment and close the issue
+							logger.info("... information still missing after grace period, closing the issue")
+							close_issue(internal, headers, config, dryrun)
 
-		elif internal["created"] >= config["since"] and not valid:
-			# issue was created since last run and is invalid
-			if close_directly:
-				# we close tickets directly => add a comment and close the ticket
-				print("\t... information is missing, closing the ticket")
-				directly_close_issue(internal, headers, config, dryrun)
-			else:
-				# we don't close tickets directly => add a friendly comment and label the issue correspondingly
-				print("\t... reminding author of information to include")
-				add_reminder(internal, headers, config, dryrun)
+			elif internal["created"] >= config["since"] and not valid:
+				# issue was created since last run and is invalid
+				if close_directly:
+					# we close tickets directly => add a comment and close the ticket
+					logger.info("... information is missing, closing the ticket")
+					directly_close_issue(internal, headers, config, dryrun)
+				else:
+					# we don't close tickets directly => add a friendly comment and label the issue correspondingly
+					logger.info("... reminding author of information to include")
+					add_reminder(internal, headers, config, dryrun)
+		except:
+			logger.exception("Exception while processing issues")
 
 	if file is not None and not dryrun:
 		# we are using a config file, so we save the current date and time for the next run
@@ -314,31 +270,6 @@ def check_issues(config, file=None, dryrun=False):
 
 
 ##~~ config handling
-
-
-def load_config(file):
-	"""
-	Loads the config from the file
-
-	:param file: the file from which to load the config
-	:return: the loaded config represented as a dictionary, might be empty if config file was not found or empty
-	"""
-	import yaml
-	import os
-
-	def datetime_constructor(loader, node):
-		return dateutil.parser.parse(node.value)
-	yaml.add_constructor(u'tag:yaml.org,2002:timestamp', datetime_constructor)
-
-	config = None
-	if file is not None and os.path.exists(file) and os.path.isfile(file):
-		with open(file, "r") as f:
-			config = yaml.safe_load(f)
-
-	if config is None:
-		config = {}
-
-	return config
 
 
 def validate_config(config):
@@ -352,13 +283,13 @@ def validate_config(config):
 
 	# check for mandatory values
 	if not "token" in config or not config["token"]:
-		print("Token must be defined", file=sys.stderr)
+		logger.error("Token must be defined")
 		sys.exit(-1)
 	if not "repo" in config or not config["repo"]:
-		print("Repo must be defined", file=sys.stderr)
+		logger.error("Repo must be defined")
 		sys.exit(-1)
 	if not "reminder" in config or not config["reminder"]:
-		print("Reminder text must be defined", file=sys.stderr)
+		logger.error("Reminder text must be defined")
 		sys.exit(-1)
 
 	# set default values were necessary
@@ -380,43 +311,18 @@ def validate_config(config):
 		config["dryrun"] = False
 	if not "phrase" in config or not config["phrase"]:
 		config["phrase"] = "I love cookies"
+	if not "debug" in config or config["debug"] is None:
+		config["debug"] = False
 
 	if not "past_phrases" in config or not config["past_phrases"]:
 		config["past_phrases"] = []
 	else:
 		if not "newphrase" in config or not config["newphrase"]:
-			print("New phrase text must be defined", file=sys.stderr)
+			logger.info("New phrase text must be defined", file=sys.stderr)
 
 	# sanitizing
 	if config["since"].tzinfo is None:
 		config["since"] = config["since"].replace(tzinfo=dateutil.tz.tzutc())
-
-
-def update_config(filename, since=datetime.datetime.utcnow()):
-	import yaml
-	import os
-	import shutil
-
-	if filename is not None and os.path.exists(filename) and os.path.isfile(filename):
-		# load config from file
-		with open(filename, "r") as f:
-			config = yaml.safe_load(f)
-		if config is None:
-			return
-
-		# update since
-		config["since"] = since.replace(tzinfo=dateutil.tz.tzutc())
-
-		# write back the config
-		tmpfilename = filename + ".tmp"
-		try:
-			with open(tmpfilename, "w") as f:
-				yaml.safe_dump(config, f, default_flow_style=False, indent="    ", allow_unicode=True)
-			shutil.copyfile(tmpfilename, filename)
-		finally:
-			os.remove(tmpfilename)
-
-		print("Saved current date and time for next run")
 
 
 ##~~ CLI
@@ -461,6 +367,8 @@ def main():
 						help="Just print what would be done without actually doing it")
 	parser.add_argument("-v", "--version", action="store_true", dest="version",
 						help="Print the version and exit")
+	parser.add_argument("--debug", action="store_true", dest="debug",
+	                    help="Enable debug logging")
 
 	# parse CLI arguments
 	args = parser.parse_args()
@@ -468,7 +376,7 @@ def main():
 	# if only version is to be printed, do so and exit
 	if args.version:
 		from gitissuebot import _version
-		print(_version.get_versions()["version"])
+		logger.info(_version.get_versions()["version"])
 		sys.exit(0)
 
 	# merge config (if given) and CLI parameters
@@ -499,9 +407,13 @@ def main():
 		config["closingnow"] = args.closingnow
 	config["close_directly"] = config["close_directly"] if "close_directly" in config else False or args.close_directly
 	config["dryrun"] = config["dryrun"] if "dryrun" in config else False or args.dryrun
+	config["debug"] = config["debug"] if "debug" in config else False or args.debug
 
 	# validate the config
 	validate_config(config)
+
+	# setup logger
+	setup_logging(debug=config["debug"])
 
 	# check existing issues
 	check_issues(config, file=args.config, dryrun=config["dryrun"])
