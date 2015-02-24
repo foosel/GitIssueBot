@@ -14,7 +14,7 @@ import sys
 
 # Github API URLs
 USER_URL = "https://api.github.com/user"
-ISSUES_URL = "https://api.github.com/repos/{repo}/issues?state=open&since={since}"
+ISSUES_URL = "https://api.github.com/repos/{repo}/issues?state=open"
 
 
 class OldPhrase(Exception):
@@ -253,7 +253,7 @@ def check_issues(config, file=None, dryrun=False):
 
 	# retrieve issues to process
 	print("Fetching all issues since %s" % since.isoformat())
-	url = ISSUES_URL.format(repo=config["repo"], since=since.isoformat())
+	url = ISSUES_URL.format(repo=config["repo"])
 	r = requests.get(url, headers=headers)
 	issues = filter(issue_filter, r.json())
 	print("Found %d issues to process..." % len(issues))
