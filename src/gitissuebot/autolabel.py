@@ -30,6 +30,9 @@ def apply_label(label, issue, headers, dryrun=False):
 
 
 def process_issues(config, file=None, dryrun=False):
+	if dryrun:
+		logger.info("THIS IS A DRYRUN")
+
 	# prepare headers
 	headers = {"Authorization": "token %s" % config["token"]}
 

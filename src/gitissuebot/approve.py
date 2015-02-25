@@ -184,6 +184,8 @@ def _close(issue, headers, body, dryrun):
 
 
 def check_issues(config, file=None, dryrun=False):
+	if dryrun:
+		logger.info("THIS IS A DRYRUN")
 
 	# prepare headers
 	headers = {"Authorization": "token %s" % config["token"]}
