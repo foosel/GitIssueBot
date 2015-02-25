@@ -113,6 +113,8 @@ def main(args=None):
 		config["token"] = args.token
 	if args.repo is not None:
 		config["repo"] = args.repo
+	if args.since is not None:
+		config["since"] = args.since
 	if args.mappings is not None:
 		config["mappings"] = args.mappings
 	config["ignore_case"] = config["ignore_case"] if "ignore_case" in config and config["ignore_case"] else False or args.ignore_case
