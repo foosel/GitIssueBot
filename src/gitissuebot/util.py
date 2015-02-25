@@ -115,7 +115,7 @@ def get_issues(token, repo, since=None, issue_filter=None, converter=None):
 	else:
 		url = ISSUES_SINCE_URL
 
-	url = url.format(repo=repo, since=since)
+	url = url.format(repo=repo, since=since.isoformat())
 	raw_issues = []
 	while True:
 		logger.debug("Retrieving issues from url %s" % url)
