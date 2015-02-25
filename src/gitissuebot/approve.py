@@ -215,14 +215,16 @@ def check_issues(config, file=None, dryrun=False):
 			try:
 				valid = validator(issue, headers, config)
 			except OldPhrase:
-				# find the last comment made by the bot
+				# check if there was any comment made by the bot
 				r = requests.get(internal["comments_url"], headers=headers)
 				comments = r.json()
 				bot_comment = None
 				for comment in comments:
 					if comment["user"]["id"] == bot_user_id:
 						bot_comment = comment
+						break
 				if bot_comment is None:
+					# no comment yet, make one
 					add_oldphrasehint(internal, headers, config, dryrun)
 				valid = True
 
