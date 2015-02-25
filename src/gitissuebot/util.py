@@ -149,7 +149,7 @@ def load_config(file):
 
 	def datetime_constructor(loader, node):
 		return dateutil.parser.parse(node.value)
-	yaml.add_constructor(u'tag:yaml.org,2002:timestamp', datetime_constructor)
+	yaml.SafeLoader.add_constructor(u'tag:yaml.org,2002:timestamp', datetime_constructor)
 
 	config = None
 	if file is not None and os.path.exists(file) and os.path.isfile(file):
