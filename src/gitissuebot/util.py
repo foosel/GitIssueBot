@@ -8,6 +8,7 @@ __copyright__ = "Copyright (C) 2014 Gina Häußge - Released under terms of the 
 import dateutil.parser, dateutil.tz
 import datetime
 import requests
+import urllib
 import sys
 
 import logging
@@ -115,7 +116,7 @@ def get_issues(token, repo, since=None, issue_filter=None, converter=None):
 	else:
 		url = ISSUES_SINCE_URL
 
-	url = url.format(repo=repo, since=since.isoformat())
+	url = url.format(repo=repo, since=urllib.quote(since.isoformat()))
 	raw_issues = []
 	while True:
 		logger.debug("Retrieving issues from url %s" % url)
