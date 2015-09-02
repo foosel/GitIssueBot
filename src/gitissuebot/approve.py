@@ -154,7 +154,7 @@ def close_issue(issue, headers, config, dryrun):
 
 	body = None
 	if "closing" in config and config["closing"]:
-		body = config["closing"]
+		body = config["closing"].format(author=issue["author"])
 
 	_close(issue, headers, body, dryrun)
 
