@@ -37,6 +37,13 @@ def validator(issue, headers, config):
 	:return: true if issue validates, false otherwise
 	"""
 
+	author = issue["author"]
+	author_id = issue["author_id"]
+
+	if author in config["whitelisted_authors"]:
+		logger.info("... issue reported by whitelisted author, assuming it's valid")
+		return True
+
 	ignored_label = len(set(config["ignored_labels"]).intersection(set(map(lambda x: x["name"], issue["labels"])))) > 0
 	if ignored_label:
 		return True
@@ -53,13 +60,11 @@ def validator(issue, headers, config):
 			if phrase.lower() in lower_body:
 				raise OldPhrase()
 
-	author = issue["user"]["id"]
-
 	if issue["comments"] > 0:
 		r = requests.get(issue["comments_url"], headers=headers)
 		comments = r.json()
 		for comment in comments:
-			if comment["user"]["id"] == author and config["phrase"].lower() in comment["body"].lower():
+			if comment["user"]["id"] == author_id and config["phrase"].lower() in comment["body"].lower():
 				return True
 
 	return False
@@ -215,7 +220,7 @@ def check_issues(config, file=None, dryrun=False):
 
 		try:
 			try:
-				valid = validator(issue, headers, config)
+				valid = validator(internal, headers, config)
 			except OldPhrase:
 				# check if there was any comment made by the bot
 				r = requests.get(internal["comments_url"], headers=headers)
