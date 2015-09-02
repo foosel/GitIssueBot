@@ -44,7 +44,7 @@ def validator(issue, headers, config):
 		logger.info("... issue reported by whitelisted author, assuming it's valid")
 		return True
 
-	ignored_label = len(set(config["ignored_labels"]).intersection(set(map(lambda x: x["name"], issue["labels"])))) > 0
+	ignored_label = len(set(config["ignored_labels"]).intersection(set(issue["labels"]))) > 0
 	if ignored_label:
 		return True
 
