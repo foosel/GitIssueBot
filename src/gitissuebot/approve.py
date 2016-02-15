@@ -25,6 +25,27 @@ class OldPhrase(Exception):
 
 ##~~ some helpers
 
+def has_whitelisted_author(issue, config):
+	if issue["author"] in config["whitelisted_authors"]:
+		logger.info("... issue reported by whitelisted author, assuming it's valid")
+		return True
+
+
+def has_ignored_labels(issue, config):
+	return len(set(config["ignored_labels"]).intersection(set(issue["labels"]))) > 0
+
+
+def has_ignored_title(issue, config):
+	for ignored_title in config["ignored_titles"]:
+		if ignored_title.lower() in issue["title"].lower():
+			return True
+
+	return False
+
+
+def ignore_for_labeling(issue, config):
+	return has_ignored_title(issue, config) or has_ignored_labels(issue, config)
+
 
 def validator(issue, headers, config):
 	"""
@@ -37,20 +58,10 @@ def validator(issue, headers, config):
 	:return: true if issue validates, false otherwise
 	"""
 
-	author = issue["author"]
 	author_id = issue["author_id"]
 
-	if author in config["whitelisted_authors"]:
-		logger.info("... issue reported by whitelisted author, assuming it's valid")
+	if has_ignored_labels(issue, config) or has_ignored_title(issue, config) or has_whitelisted_author(issue, config):
 		return True
-
-	ignored_label = len(set(config["ignored_labels"]).intersection(set(issue["labels"]))) > 0
-	if ignored_label:
-		return True
-
-	for ignored_title in config["ignored_titles"]:
-		if ignored_title.lower() in issue["title"].lower():
-			return True
 
 	lower_body = issue["body"].lower()
 	if config["phrase"].lower() in lower_body:
@@ -129,12 +140,21 @@ def mark_issue_valid(issue, headers, config, dryrun):
 	:param dryrun: whether to only simulate the writing API calls
 	"""
 
-	if not "label" in config or not config["label"]:
-		# no label configured, nothing to do
+	label = config.get("label", None)
+	oklabel = config.get("oklabel", None)
+
+	if not label and not oklabel:
 		return
 
 	current_labels = list(issue["labels"])
-	current_labels.remove(config["label"])
+
+	# apply the "incomplete ticket" label if configured
+	if label and label in current_labels:
+		current_labels.remove(label)
+
+	# apply the "ok ticket" label if configured and issue wouldn't be ignored otherwise
+	if oklabel and not oklabel in current_labels and not (has_ignored_labels(issue, config) or has_ignored_title(issue, config)):
+		current_labels.append(oklabel)
 
 	logger.debug("-> Marking issue valid via PATCH %s, labels=%r" % (issue["url"], current_labels))
 	if not dryrun:
@@ -238,7 +258,7 @@ def check_issues(config, file=None, dryrun=False):
 			if "label" in config and config["label"] and config["label"] in internal["labels"]:
 				# issue is currently labeled as incomplete, let's see if the information has been added or if it's still missing
 				if valid:
-					# issue is now valid => remove the label marking it as lacking information
+					# issue is now valid => remove the label marking it as lacking information, add the oklabel if configured
 					logger.info("... author updated ticket with information, marking valid")
 					mark_issue_valid(internal, headers, config, dryrun)
 
@@ -332,6 +352,9 @@ def validate_config(config):
 			logger.error("New phrase text must be defined")
 			sys.exit(-1)
 
+	if not "whitelisted_authors" in config or not config["whitelisted_authors"]:
+		config["whitelisted_authors"] = []
+
 	# sanitizing
 	if config["since"].tzinfo is None:
 		config["since"] = config["since"].replace(tzinfo=dateutil.tz.tzutc())
@@ -360,6 +383,8 @@ def main(args=None):
 		config["since"] = args.since
 	if args.label is not None:
 		config["label"] = args.label
+	if args.oklabel is not None:
+		config["oklabel"] = args.oklabel
 	if args.ignored_labels is not None:
 		config["ignored_labels"] = filter(lambda x: x is not None and len(x) > 0, map(str.strip, args.ignored_labels.split(",")))
 	if args.ignored_titles is not None:
@@ -417,6 +442,8 @@ def argparser(parser=None):
 	                    help="Directly close invalid tickets instead of applying grace period")
 	parser.add_argument("-l", "--label", action="store", dest="label",
 	                    help="Label to apply to issues missing information, can be left out if such issues are not be labeled specially. Defaults to not set. Note: Specified label must exist in the targeted repo!")
+	parser.add_argument("-o", "--oklabel", action="store", dest="oklabel",
+	                    help="Label to apply to issues that check out, can be left out if such issues are not label specially. Defaults to not set. Note: Specified label must exist in the targeted repo!")
 	parser.add_argument("--ignored-labels", action="store", dest="ignored_labels",
 	                    help="Comma-separated list of labels tagging issues to ignore during processing (e.g. feature requests), defaults to an empty list")
 	parser.add_argument("--ignored-titles", action="store", dest="ignored_titles",
