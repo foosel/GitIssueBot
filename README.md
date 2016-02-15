@@ -29,103 +29,105 @@ take the configuration.
 
 An example for such a configuration file can be found below:
 
-    # The Github access token to use for accessing the Github API
-    # => https://help.github.com/articles/creating-an-access-token-for-command-line-use
-    token: someVeryLongToken
-    
-    # The repository on which to work, in the format <username>/<repositoryname>
-    repo: myuser/myrepository
-    
-    # Any issues added since that date will be processed
-    since: 2014-07-27 12:00:00+00:00
-    
-    # Phrase to search for
-    phrase: I love cookies
-    
-    # Label to add to issue if it's invalid
-    label: incomplete issue
-    
-    # Grace period after which to close issues that are still invalid
-    grace_period: 14
+``` yaml
+# The Github access token to use for accessing the Github API
+# => https://help.github.com/articles/creating-an-access-token-for-command-line-use
+token: someVeryLongToken
 
-    # If set to true, invalid tickets will be closed directly instead of being marked
-    close_directly: false
-    
-    # Labels if issues to ignore
-    ignored_labels:
-    - request
-    - support
-    - question
-    - misc
-    - accepted
-    
-    # Parts of titles of issues to ignore
-    ignored_titles:
-    - '[Request]'
-    - '[Support]'
-    - '[Question]'
-    - '[Misc]'
-    
-    # Reminder to add to incomplete issues
-    reminder: 'Hi @{author},
-    
-    
-      It looks like there is some information missing from your ticket that will be needed
-      in order to diagnose and fix the problem at hand. Please take a look at the [Contribution
-      Guidelines](https://github.com/myuser/myrepository/blob/master/CONTRIBUTING.md), which 
-      will tell you **exactly** what your ticket has to contain in order to be processable.
-    
-    
-      I''m marking this one now as needing some more information. Please understand that
-      if you do not provide that information within the next two weeks (until {until})
-      I''ll close this ticket so it doesn''t clutter the bug tracker.
-    
-    
-      Best regards,
-    
-      ~ Your friendly GitIssueBot
-    
-    
-      PS: I''m just an automated script, not a human being.
-    
-      '
-    
-    # Comment to add when closing an issue
-    closing: 'Since apparently some of the required information is still missing, I''m
-      closing this now, sorry. Feel free to reopen this or create a new issue once you
-      can provide **all** required information.
-    
-      '
+# The repository on which to work, in the format <username>/<repositoryname>
+repo: myuser/myrepository
 
-    # Comment to add when closing an issue directly
-    closingnow: 'Hi @{author},
+# Any issues added since that date will be processed
+since: 2014-07-27 12:00:00+00:00
+
+# Phrase to search for
+phrase: I love cookies
+
+# Label to add to issue if it's invalid
+label: incomplete issue
+
+# Grace period after which to close issues that are still invalid
+grace_period: 14
+
+# If set to true, invalid tickets will be closed directly instead of being marked
+close_directly: false
+
+# Labels if issues to ignore
+ignored_labels:
+- request
+- support
+- question
+- misc
+- accepted
+
+# Parts of titles of issues to ignore
+ignored_titles:
+- '[Request]'
+- '[Support]'
+- '[Question]'
+- '[Misc]'
+
+# Reminder to add to incomplete issues
+reminder: 'Hi @{author},
 
 
-      It looks like there is some information missing from your ticket that will be needed
-      in order to diagnose and fix the problem at hand. Please take a look at the [Contribution
-      Guidelines](https://github.com/myuser/myrepository/blob/master/CONTRIBUTING.md), which
-      will tell you **exactly** what your ticket has to contain in order to be processable.
+  It looks like there is some information missing from your ticket that will be needed
+  in order to diagnose and fix the problem at hand. Please take a look at the [Contribution
+  Guidelines](https://github.com/myuser/myrepository/blob/master/CONTRIBUTING.md), which 
+  will tell you **exactly** what your ticket has to contain in order to be processable.
 
 
-      I''m marking this one now as needing some more information. Please understand that
-      if you do not provide that information within the next two weeks (until {until})
-      I''ll close this ticket so it doesn''t clutter the bug tracker.
+  I''m marking this one now as needing some more information. Please understand that
+  if you do not provide that information within the next two weeks (until {until})
+  I''ll close this ticket so it doesn''t clutter the bug tracker.
 
 
-      Best regards,
+  Best regards,
 
-      ~ Your friendly GitIssueBot
+  ~ Your friendly GitIssueBot
 
 
-      PS: I''m just an automated script, not a human being.
+  PS: I''m just an automated script, not a human being.
 
-      '
-    
-    # Whether to only perform a dry run, without any writing requests against the API
-    dryrun: false
+  '
 
-    # Whether to enable debug logging
-    debug: false
+# Comment to add when closing an issue
+closing: 'Since apparently some of the required information is still missing, I''m
+  closing this now, sorry. Feel free to reopen this or create a new issue once you
+  can provide **all** required information.
+
+  '
+
+# Comment to add when closing an issue directly
+closingnow: 'Hi @{author},
+
+
+  It looks like there is some information missing from your ticket that will be needed
+  in order to diagnose and fix the problem at hand. Please take a look at the [Contribution
+  Guidelines](https://github.com/myuser/myrepository/blob/master/CONTRIBUTING.md), which
+  will tell you **exactly** what your ticket has to contain in order to be processable.
+
+
+  I''m marking this one now as needing some more information. Please understand that
+  if you do not provide that information within the next two weeks (until {until})
+  I''ll close this ticket so it doesn''t clutter the bug tracker.
+
+
+  Best regards,
+
+  ~ Your friendly GitIssueBot
+
+
+  PS: I''m just an automated script, not a human being.
+
+  '
+
+# Whether to only perform a dry run, without any writing requests against the API
+dryrun: false
+
+# Whether to enable debug logging
+debug: false
+```
 
 The [generated token](https://help.github.com/articles/creating-an-access-token-for-command-line-use) needs to grant 
 access to repo and -- if the issue of a private repository are to be managed -- also access to private repos.
@@ -150,35 +152,156 @@ take the configuration.
 
 An example for such a configuration file can be found below:
 
-    # The Github access token to use for accessing the Github API
-    # => https://help.github.com/articles/creating-an-access-token-for-command-line-use
-    token: someVeryLongToken
+``` yaml
+# The Github access token to use for accessing the Github API
+# => https://help.github.com/articles/creating-an-access-token-for-command-line-use
+token: someVeryLongToken
 
-    # The repository on which to work, in the format <username>/<repositoryname>
-    repo: myuser/myrepository
+# The repository on which to work, in the format <username>/<repositoryname>
+repo: myuser/myrepository
 
-    # Any issues added since that date will be processed
-    since: 2014-07-27 12:00:00+00:00
+# Any issues added since that date will be processed
+since: 2014-07-27 12:00:00+00:00
 
-    # Mappings of title snippets to labels to be applied
-    mappings:
-    - tag: '[Request]'
-      label: request
-    - tag: '[Support]'
-      label: support
-    - tag: '[Question]'
-      label: question
-    - tag: '[Misc]'
-      label: misc
+# Mappings of title snippets to labels to be applied
+mappings:
+- tag: '[Request]'
+  label: request
+- tag: '[Support]'
+  label: support
+- tag: '[Question]'
+  label: question
+- tag: '[Misc]'
+  label: misc
 
-    # Whether to search for the title snippets in a case insensitive manner
-    ignore_case: false
+# Whether to search for the title snippets in a case insensitive manner
+ignore_case: false
 
-    # Whether to only perform a dry run, without any writing requests against the API
-    dryrun: false
+# Whether to only perform a dry run, without any writing requests against the API
+dryrun: false
 
-    # Whether to enable debug logging
-    debug: false
+# Whether to enable debug logging
+debug: false
+```
+
+The [generated token](https://help.github.com/articles/creating-an-access-token-for-command-line-use) needs to grant
+access to repo and -- if the issue of a private repository are to be managed -- also access to private repos.
+
+### Usage
+
+You will need to regularly execute the autolabel script, I recommend creating a cronjob for that and then let it do
+its job daily or weekly or something like that.
+
+## PR Check
+
+``gitissuebot prcheck`` allows checking any new pull requests to make sure they:
+
+  * don't have an empty description,
+  * target only a `base` matching a whitelist and/or don't target a `base` matching a blacklist,
+  * are only from a `head` matching a whitelist and/or aren't from a `head` matching a blacklist
+
+This is to remind contributors of rules like "Create all PRs against branch X" or "always create a custom branch
+for your PR".
+
+### Configuration
+
+``` yaml
+# The Github access token to use for accessing the Github API
+# => https://help.github.com/articles/creating-an-access-token-for-command-line-use
+token: someVeryLongToken
+
+# The repository on which to work, in the format <username>/<repositoryname>
+repo: myuser/myrepository
+
+# Any PRs created since that date will be processed
+since: 2016-02-12 12:00:00+00:00
+
+# allowed names for source branch names, won't be tested if unset
+sources:
+- some_patch
+
+# blacklisted values for source branch names, won't be tested if unset
+blacklisted_sources:
+- master
+- devel
+
+# allowed values for target branch names, won't be tested if unset
+targets:
+- devel
+
+# blacklisted values for target branch names, won't be tested if unset
+blacklisted_targets:
+- master
+
+# Text of reminder comment to post to PRs for which problems are detected.
+# 
+# The following placeholder are possible:
+# - author: the name of the author of the PR
+# - source_repo: repository of the PR head/source
+# - source_branch: branch name of the PR head/source
+# - target_repo: repository of the PR base/target
+# - target_branch: branch name of the PR base/target
+# - problems: newline separated list of problem strings for detected problems,
+#   strings are defined below
+reminder: 'Hi @{author},
+
+
+  Thank you for your contribution! Sadly it looks like there is something wrong with
+  this PR from branch `{source_branch}` on repository `{source_repo}` to branch `{target_branch}`
+  on repository `{target_repo}`:
+
+
+  {problems}
+
+
+  Please take a look at the [section on PRs in the Contribution Guidelines](https://github.com/myuser/myrepository/blob/master/CONTRIBUTING.md)
+  and make sure that your PR follows them. Thank you!
+
+
+  Best regards,
+
+  ~ Your friendly GitIssueBot
+
+
+  PS: I''m just an automated script, not a human being.
+
+  '
+
+# Label to apply to PRs with problems - PRs with that label won't be processed by prcheck again
+label: needs some work
+
+# Strings to write into the comment for detected problems
+problems:
+
+  # source branch was not among whitelisted names
+  invalid_source: '  * Your PR''s source branch `{source_branch}` isn''t among the
+    allowed source branches: {sources}'
+
+  # source branch was among blacklisted names
+  blacklisted_source: '  * Your PR''s source branch `{source_branch}` is among the
+    blacklisted source branches: {blacklisted_sources}'
+
+  # target branch was not among whitelisted names
+  invalid_target: '  * Your PR''s target branch `{target_branch}` isn''t among the
+    allowed target branches: {targets}'
+
+  # target branch was among blacklisted names
+  blacklisted_target: '  * Your PR''s target branch `{target_branch}` is among the
+    blacklisted target branches: {blacklisted_targets}'
+
+  # PR description was empty
+  empty_body: '  * Your PR does have an empty description. Please explain what your
+    PR does, how you''ve tested it, etc.'
+
+# Whether to match branch names in a case insensitive manner
+ignore_case: false
+
+# Whether to only perform a dry run, without any writing requests against the API
+dryrun: false
+
+# Whether to enable debug logging
+debug: false
+```
 
 The [generated token](https://help.github.com/articles/creating-an-access-token-for-command-line-use) needs to grant
 access to repo and -- if the issue of a private repository are to be managed -- also access to private repos.

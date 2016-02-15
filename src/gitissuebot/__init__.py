@@ -11,6 +11,7 @@ del get_versions
 
 from .approve import argparser as approve_argparser, main as approve_main
 from .autolabel import argparser as autolabel_argparser, main as autolabel_main
+from .prcheck import argparser as prcheck_argparser, main as prcheck_main
 
 def main():
 	import argparse
@@ -28,6 +29,10 @@ def main():
 	autolabel_parser = subparsers.add_parser("autolabel")
 	autolabel_argparser(autolabel_parser)
 	autolabel_parser.set_defaults(func=autolabel_main)
+
+	prcheck_parser = subparsers.add_parser("prcheck")
+	prcheck_argparser(prcheck_parser)
+	prcheck_parser.set_defaults(func=prcheck_main)
 
 	args = parser.parse_args()
 

@@ -87,7 +87,8 @@ def params():
 		"console_scripts": [
 			"gitissuebot = gitissuebot:main",
 			"gitissuebot-approve = gitissuebot.approve:main",
-			"gitissuebot-autolabel = gitissuebot.autolabel:main"
+			"gitissuebot-autolabel = gitissuebot.autolabel:main",
+			"gitissuebot-prcheck = gitissuebot.prcheck:main"
 		]
 	}
 

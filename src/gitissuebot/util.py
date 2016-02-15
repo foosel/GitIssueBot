@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 USER_URL = "https://api.github.com/user"
 ISSUES_URL = "https://api.github.com/repos/{repo}/issues?state=open"
 ISSUES_SINCE_URL = "https://api.github.com/repos/{repo}/issues?state=open&since={since}"
+PRS_URL = "https://api.github.com/repos/{repo}/pulls?state=open"
 
 
 def setup_logging(debug=False):
@@ -60,7 +61,30 @@ def convert_to_internal(issue):
 		"labels": map(lambda x: x["name"], issue["labels"]),
 		"comments": issue["comments"],
 		"comments_url": issue["comments_url"],
-		"url": issue["url"]
+		"url": issue["url"],
+		"id": issue["id"]
+	}
+
+
+def convert_to_internal_pr(pr):
+	return {
+		"title": pr["title"],
+		"author": pr["user"]["login"],
+		"author_id": pr["user"]["id"],
+		"body": pr["body"],
+		"created_str": pr["created_at"],
+		"created": dateutil.parser.parse(pr["created_at"]),
+		"updated_str": pr["updated_at"],
+		"updated": dateutil.parser.parse(pr["updated_at"]),
+		"url": pr["url"],
+		"source_repo": pr["head"]["repo"]["full_name"],
+		"source_branch": pr["head"]["ref"],
+		"target_repo": pr["base"]["repo"]["full_name"],
+		"target_branch": pr["base"]["ref"],
+		"comments_url": pr["comments_url"],
+		"issue_url": pr["issue_url"],
+		"diff_url": pr["diff_url"],
+		"id": pr["id"]
 	}
 
 
@@ -103,39 +127,45 @@ def get_issues(token, repo, since=None, issue_filter=None, converter=None):
 	:return: all issues not filtered out, converted via the converter
 	"""
 
+	if since is None:
+		url = ISSUES_URL.format(repo=repo)
+	else:
+		url = ISSUES_SINCE_URL.format(repo=repo, since=urllib.quote(since.isoformat()))
+	return get_from_api(token, url, entry_filter=issue_filter, converter=converter)
+
+
+def get_prs(token, repo, pr_filter=None, converter=None):
+	url = PRS_URL.format(repo=repo)
+	return get_from_api(token, url, entry_filter=pr_filter, converter=converter)
+
+
+def get_from_api(token, url, entry_filter=None, converter=None):
 	headers = {"Authorization": "token {token}".format(token=token)}
 
-	if issue_filter is None:
-		issue_filter = lambda x: True
+	if entry_filter is None:
+		entry_filter = lambda x: True
 	if converter is None:
 		converter = lambda x: x
 
-	if since is None:
-		url = ISSUES_URL
-		since = ""
-	else:
-		url = ISSUES_SINCE_URL
-
-	url = url.format(repo=repo, since=urllib.quote(since.isoformat()))
-	raw_issues = []
+	raw_entries = []
 	while True:
-		logger.debug("Retrieving issues from url %s" % url)
+		logger.debug("Retrieving entries from url %s" % url)
 		r = requests.get(url, headers=headers)
 
 		retrieved_issues = r.json()
-		logger.debug("+ %d issues" % len(retrieved_issues))
-		raw_issues += retrieved_issues
+		logger.debug("+ %d entries" % len(retrieved_issues))
+		raw_entries += retrieved_issues
 
 		if r.links and "next" in r.links and "url" in r.links["next"]:
 			url = r.links["next"]["url"]
 		else:
 			break
 
-	logger.debug("Found %d unfiltered issues" % len(raw_issues))
-	issues = filter(issue_filter, raw_issues)
-	logger.debug("%d issues left after filter" % len(issues))
+	logger.debug("Found %d unfiltered entries" % len(raw_entries))
+	entries = filter(entry_filter, raw_entries)
+	logger.debug("%d entries left after filter" % len(entries))
 
-	return map(converter, issues)
+	return map(converter, entries)
 
 
 def load_config(file):
