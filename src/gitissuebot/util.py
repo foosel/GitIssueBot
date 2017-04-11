@@ -151,6 +151,7 @@ def get_from_api(token, url, entry_filter=None, converter=None):
 	while True:
 		logger.debug("Retrieving entries from url %s" % url)
 		r = requests.get(url, headers=headers)
+		r.raise_for_status()
 
 		retrieved_issues = r.json()
 		logger.debug("+ %d entries" % len(retrieved_issues))

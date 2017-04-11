@@ -131,7 +131,11 @@ def main(args=None):
 	setup_logging(debug=config["debug"])
 
 	# process existing issues
-	process_issues(config, file=args.config, dryrun=config["dryrun"])
+	try:
+		process_issues(config, file=args.config, dryrun=config["dryrun"])
+	except:
+		logger.exception("Error during execution")
+		sys.exit(-1)
 
 def argparser(parser=None):
 	if parser is None:
