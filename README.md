@@ -197,6 +197,7 @@ its job daily or weekly or something like that.
 ``gitissuebot prcheck`` allows checking any new pull requests to make sure they:
 
   * don't have an empty description,
+  * have a title that matches some regex,
   * target only a `base` matching a whitelist and/or don't target a `base` matching a blacklist,
   * are only from a `head` matching a whitelist and/or aren't from a `head` matching a blacklist
 
@@ -289,9 +290,18 @@ problems:
   blacklisted_target: '  * Your PR''s target branch `{target_branch}` is among the
     blacklisted target branches: {blacklisted_targets}'
 
+  # PR title is invalid
+  invalid_title: '  * Your PR does has an invalid title. Please update it to start
+    with one of [bugfix], [feature], [critical], [new locale], [misc], [tests], or
+    [pkg].'
+
   # PR description was empty
   empty_body: '  * Your PR does have an empty description. Please explain what your
     PR does, how you''ve tested it, etc.'
+
+# Regex for title
+title_regex: '\[bugfix\] |\[feature\] |\[critical\] |\[new locale\] |\[misc\] |\[tests\]
+  |\[pkg\] '
 
 # Whether to match branch names in a case insensitive manner
 ignore_case: false

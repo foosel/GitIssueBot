@@ -10,6 +10,7 @@ import json
 import sys
 import datetime
 import dateutil.parser
+import re
 
 from .util import get_prs, load_config, update_config, convert_to_internal_pr, convert_to_internal, setup_logging, print_version
 
@@ -35,7 +36,7 @@ def valid(pr, config):
 	not_in_sources = len(sources) > 0 and all(map(lambda source: source != pr["source_branch"], sources))
 	in_blacklisted_sources = len(blacklisted_sources) > 0 and any(map(lambda source: source == pr["source_branch"], blacklisted_sources))
 	empty_body = pr["body"] is None or pr["body"].strip() == ""
-
+	invalid_title = pr["title"] is None or not config["title_compiled_regex"].match(pr["title"])
 	problems = []
 
 	if not_in_targets:
@@ -48,6 +49,8 @@ def valid(pr, config):
 		problems.append("blacklisted_source")
 	if empty_body:
 		problems.append("empty_body")
+	if invalid_title:
+		problems.append("invalid_title")
 
 	return problems
 
@@ -139,7 +142,7 @@ def process_prs(config, file=None, dryrun=False):
 
 		problems = valid(pr, config)
 		if problems:
-			logger.info("... reminding author of information to include")
+			logger.info("... reminding author of information to include: %s", str(problems))
 			add_reminder(pr, config, problems, dryrun=dryrun)
 
 	if file is not None and not dryrun:
@@ -211,6 +214,7 @@ def main(args=None):
 		config["sources"] = args.sources
 	if args.blacklisted_sources is not None:
 		config["blacklisted_sources"] = args.blacklisted_sources
+	config["title_compiled_regex"] = re.compile(config["title_regex"] if "title_regex" in config else '.*')
 	config["ignore_case"] = config["ignore_case"] if "ignore_case" in config and config["ignore_case"] else False or args.ignore_case
 	config["dryrun"] = config["dryrun"] if "dryrun" in config and config["dryrun"] else False or args.dryrun
 	config["debug"] = config["debug"] if "debug" in config and config["debug"] else False or args.debug
