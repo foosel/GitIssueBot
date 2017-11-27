@@ -115,7 +115,15 @@ def process_prs(config, file=None, dryrun=False):
 	logger.info("Fetching all PRs")
 
 	def convert_pr(raw):
-		pr = convert_to_internal_pr(raw)
+		try:
+			pr = convert_to_internal_pr(raw)
+		except:
+			# something went wrong while converting this entry, ignore it
+			logger.exception("Error converting entry, ignoring it: {!r}".format(raw))
+			pr = None
+
+		if pr is None:
+			return None
 
 		try:
 			r = requests.get(pr["issue_url"], headers=headers)

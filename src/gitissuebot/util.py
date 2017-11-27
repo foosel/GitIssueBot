@@ -166,7 +166,7 @@ def get_from_api(token, url, entry_filter=None, converter=None):
 	entries = filter(entry_filter, raw_entries)
 	logger.debug("%d entries left after filter" % len(entries))
 
-	return map(converter, entries)
+	return filter(lambda x: x is not None, map(converter, entries))
 
 
 def load_config(file):
