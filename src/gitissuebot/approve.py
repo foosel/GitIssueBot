@@ -282,16 +282,22 @@ def check_issues(config, file=None, dryrun=False):
 							logger.info("... information still missing after grace period, closing the issue")
 							close_issue(internal, headers, config, dryrun)
 
-			elif internal["created"] >= config["since"] and not valid:
-				# issue was created since last run and is invalid
-				if close_directly:
-					# we close tickets directly => add a comment and close the ticket
-					logger.info("... information is missing, closing the ticket")
-					directly_close_issue(internal, headers, config, dryrun)
+			elif internal["created"] >= config["since"]:
+				# issue was created since last run
+				if valid:
+					# ...and is valid => add oklabel if configured
+					logger.info("... author submitted a valid ticket")
+					mark_issue_valid(internal, headers, config, dryrun)
 				else:
-					# we don't close tickets directly => add a friendly comment and label the issue correspondingly
-					logger.info("... reminding author of information to include")
-					add_reminder(internal, headers, config, dryrun)
+					# ...and is invalid
+					if close_directly:
+						# we close tickets directly => add a comment and close the ticket
+						logger.info("... information is missing, closing the ticket")
+						directly_close_issue(internal, headers, config, dryrun)
+					else:
+						# we don't close tickets directly => add a friendly comment and label the issue correspondingly
+						logger.info("... reminding author of information to include")
+						add_reminder(internal, headers, config, dryrun)
 		except:
 			logger.exception("Exception while processing issues")
 
@@ -467,4 +473,3 @@ def argparser(parser=None):
 
 if __name__ == "__main__":
 	main()
-
