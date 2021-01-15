@@ -1,3 +1,10 @@
+![Maintenance](https://img.shields.io/maintenance/no/2021)
+
+> ### Unmaintained as of 2021
+>
+> I no longer need GitIssueBot since I replaced its functionality with [some GitHub actions](https://github.com/OctoPrint/actions). 
+> Repository preserved for historic reasons.
+
 GitIssueBot
 -----------
 
